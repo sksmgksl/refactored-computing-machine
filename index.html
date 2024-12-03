@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>버스 시간표와 게시판</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+        .container {
+            padding: 20px;
+        }
+        .posts, .bus-info {
+            margin-bottom: 30px;
+        }
+        .post {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #fff;
+        }
+        .post h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        .bus-info input, .bus-info button {
+            padding: 10px;
+            font-size: 1em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>버스 시간표와 게시판</h1>
+</header>
+
+<div class="container">
+    <h2>게시판</h2>
+    <div class="posts" id="posts">
+        <!-- 게시글 목록이 여기에 동적으로 추가됩니다 -->
+    </div>
+
+    <h2>버스 시간표 확인</h2>
+    <div class="bus-info">
+        <form id="busForm">
+            <label for="end_time">수업 종료 시간 (HH:MM):</label>
+            <input type="text" id="end_time" name="end_time" required>
+            <button type="submit">버스 정보 확인</button>
+        </form>
+
+        <p id="busInfo"></p>
+    </div>
+
+    <a href="new_post.html">새 게시글 작성</a>
+</div>
+
+<script>
+    // 임시 게시글 목록 (게시판)
+    const posts = [
+        { id: 1, title: "버스 시간표 확인", content: "수업 종료 후 최적의 버스를 확인하세요.", date: "2024-12-01" },
+        { id: 2, title: "버스 시간 업데이트", content: "버스 시간표가 갱신되었습니다.", date: "2024-12-02" }
+    ];
+
+    // 게시글을 동적으로 HTML에 추가하는 함수
+    function renderPosts() {
+        const postContainer = document.getElementById("posts");
+        postContainer.innerHTML = '';
+        posts.forEach(post => {
+            const postElement = document.createElement("div");
+            postElement.classList.add("post");
+            postElement.innerHTML = `<h3>${post.title}</h3><p>${post.content}</p><small>${post.date}</small>`;
+            postContainer.appendChild(postElement);
+        });
+    }
+
+    // 버스 시간표 데이터
+    const busData = [
+        { id: 1, start_time: "08:45", interval: 110, last_time: "21:30" },
+        { id: 14, start_time: "09:22", interval: 28, last_time: "22:20" },
+        { id: 15, start_time: "08:15", interval: 135, last_time: "20:40" },
+        { id: 16, start_time: "09:15", interval: 255, last_time: "17:30" },
+        { id: 18, start_time: "09:05", interval: 225, last_time: "17:50" },
+        { id: 31, start_time: "09:05", interval: 195, last_time: "19:15" },
+        { id: 33, start_time: "08:30", interval: 135, last_time: "19:15" },
+        { id: 34, start_time: "09:10", interval: 110, last_time: "21:30" },
+        { id: 35, start_time: "10:10", interval: 200, last_time: "21:10" },
+        { id: 51, start_time: "11:00", interval: 210, last_time: "17:40" },
+        { id: 52, start_time: "09:52", interval: 13, last_time: "20:30" },
+        { id: 71, start_time: "09:48", interval: 24, last_time: "22:35" },
+        { id: 77, start_time: "09:20", interval: 10, last_time: "21:20" },
+        { id: 94, start_time: "10:00", interval: 110, last_time: "22:30" },
+        { id: 95, start_time: "09:20", interval: 80, last_time: "22:00" },
+        { id: 96, start_time: "09:00", interval: 90, last_time: "22:05" },
+        { id: 97, start_time: "09:50", interval: 140, last_time: "20:30" },
+        { id: 98, start_time: "08:50", interval: 110, last_time: "20:45" },
+        { id: 111, start_time: "09:05", interval: 65, last_time: "21:05" }
+    ];
+
+    // 시간 문자열을 Date 객체로 변환하는 함수
+    function parseTime(timeStr) {
+        const [hours, minutes] = timeStr.split(":");
+        const date = new Date();
+        date.setHours(hours);
+        date.setMinutes(minutes);
+        return date;
+    }
+
+    // 최적의 버스를 찾는 함수
+    function findBestBus(endTime) {
+        const endDate = parseTime(endTime);
+        let bestBus = null;
+        let minWaitTime = Infinity;
+
+        busData.forEach(bus => {
+            const startTime = parseTime(bus.start_time);
+            const lastTime = parseTime(bus.last_time);
+            const interval = bus.interval * 60000; // 밀리초로 변환
+
+            let nextBus = endDate < startTime ? startTime : new Date(startTime.getTime() + Math.ceil((endDate - startTime) / interval) * interval);
+            if (nextBus > lastTime) return;
+
+            const waitTime = nextBus - endDate;
+            if (waitTime < minWaitTime) {
+                minWaitTime = waitTime;
+                bestBus = bus;
+            }
+        });
+
+        return bestBus ? `버스 ${bestBus.id}를 타세요. 예상 출발 시간: ${new Date(endDate.getTime() + minWaitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "이용 가능한 버스가 없습니다.";
+    }
+
+    // 폼 제출 처리
+    document.getElementById("busForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const endTime = document.getElementById("end_time").value;
+        const busInfo = findBestBus(endTime);
+        document.getElementById("busInfo").innerText = busInfo;
+    });
+
+    // 페이지 로드 시 게시글 목록 렌더링
+    renderPosts();
+</script>
+
+</body>
+</html>
